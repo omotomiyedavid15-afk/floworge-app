@@ -169,8 +169,11 @@ export default function DashboardPage() {
     setProjects((prev) => [newProject, ...prev]);
     setActiveProject(id);
 
-    // Auto-open import if Figma credentials were provided during creation
+    // Persist figma credentials so the workspace page can read them
     if (data.figmaUrl && data.figmaToken) {
+      try {
+        localStorage.setItem(`ff_figma_${id}`, JSON.stringify({ url: data.figmaUrl, token: data.figmaToken }));
+      } catch {}
       setImportFigmaUrl(data.figmaUrl);
       setImportFigmaToken(data.figmaToken);
       setImportOpen(true);

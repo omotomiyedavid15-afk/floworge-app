@@ -77,7 +77,7 @@ const STATUS_COLORS = {
 interface SidebarProps {
   projectName?: string;
   screens?: Screen[];
-  activeScreen?: string;
+  activeScreen?: string | null;
   onScreenSelect?: (id: string) => void;
 }
 

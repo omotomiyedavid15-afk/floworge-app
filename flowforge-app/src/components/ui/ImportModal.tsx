@@ -5,7 +5,14 @@ import Modal from "./Modal";
 import Button from "./Button";
 import { extractFileKey } from "@/lib/figma";
 
-interface Frame {
+export interface ImportedFrame {
+  id: string;
+  name: string;
+  page: string;
+  imageUrl: string | null;
+}
+
+interface FetchedFrame {
   id: string;
   name: string;
   page: string;
@@ -16,7 +23,7 @@ type Step = "connect" | "loading" | "frames" | "importing" | "success" | "error"
 interface ImportModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onImport?: (frames: Frame[]) => void;
+  onImport?: (frames: ImportedFrame[]) => void;
   initialFigmaUrl?: string;
   initialFigmaToken?: string;
 }
@@ -31,7 +38,8 @@ export default function ImportModal({
   const [step, setStep] = useState<Step>("connect");
   const [figmaUrl, setFigmaUrl] = useState(initialFigmaUrl);
   const [figmaToken, setFigmaToken] = useState(initialFigmaToken);
-  const [frames, setFrames] = useState<Frame[]>([]);
+  const [figmaFileKey, setFigmaFileKey] = useState("");
+  const [frames, setFrames] = useState<FetchedFrame[]>([]);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [errorMsg, setErrorMsg] = useState("");
   const [fileName, setFileName] = useState("");
@@ -44,6 +52,7 @@ export default function ImportModal({
       return;
     }
 
+    setFigmaFileKey(fileKey);
     setStep("loading");
     setErrorMsg("");
 
@@ -62,7 +71,7 @@ export default function ImportModal({
 
       setFrames(data.frames);
       setFileName(data.fileName ?? "Figma File");
-      setSelected(new Set(data.frames.map((f: Frame) => f.id)));
+      setSelected(new Set(data.frames.map((f: FetchedFrame) => f.id)));
       setStep("frames");
     } catch (err: any) {
       setErrorMsg(err.message ?? "Failed to fetch frames from Figma.");
@@ -93,13 +102,37 @@ export default function ImportModal({
     fetchFrames(figmaUrl, figmaToken);
   }
 
-  function handleImport() {
+  async function handleImport() {
     setStep("importing");
     const selectedFrames = frames.filter((f) => selected.has(f.id));
-    setTimeout(() => {
-      setStep("success");
-      onImport?.(selectedFrames);
-    }, 1200);
+
+    // Fetch actual frame images from Figma
+    let imageMap: Record<string, string> = {};
+    try {
+      const res = await fetch("/api/figma/images", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          fileKey: figmaFileKey,
+          nodeIds: selectedFrames.map((f) => f.id),
+          token: figmaToken,
+        }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        imageMap = data.images ?? {};
+      }
+    } catch {
+      // Images failed — frames will still import without preview images
+    }
+
+    const framesWithImages: ImportedFrame[] = selectedFrames.map((f) => ({
+      ...f,
+      imageUrl: imageMap[f.id] ?? null,
+    }));
+
+    setStep("success");
+    onImport?.(framesWithImages);
   }
 
   function handleClose() {
@@ -108,6 +141,7 @@ export default function ImportModal({
       setStep("connect");
       setFigmaUrl(initialFigmaUrl);
       setFigmaToken(initialFigmaToken);
+      setFigmaFileKey("");
       setFrames([]);
       setSelected(new Set());
       setErrorMsg("");
@@ -117,7 +151,7 @@ export default function ImportModal({
   const selectedCount = selected.size;
 
   // Group frames by page
-  const pageGroups = frames.reduce<Record<string, Frame[]>>((acc, f) => {
+  const pageGroups = frames.reduce<Record<string, FetchedFrame[]>>((acc, f) => {
     (acc[f.page] ??= []).push(f);
     return acc;
   }, {});
@@ -177,7 +211,7 @@ export default function ImportModal({
         </div>
       )}
 
-      {/* ── Step: loading ── */}
+      {/* ── Step: loading / importing ── */}
       {(step === "loading" || step === "importing") && (
         <div className="flex flex-col items-center gap-5 py-8">
           <div className="relative w-12 h-12">
@@ -188,10 +222,10 @@ export default function ImportModal({
           </div>
           <div className="text-center">
             <p className="text-[#ededed]" style={{ fontSize: "15px", fontWeight: 450, letterSpacing: "-0.2px" }}>
-              {step === "loading" ? "Connecting to Figma…" : "Importing frames…"}
+              {step === "loading" ? "Connecting to Figma…" : "Fetching frame images…"}
             </p>
             <p className="text-[#888888] mt-1" style={{ fontSize: "13px", fontWeight: 330, letterSpacing: "-0.1px" }}>
-              {step === "loading" ? "Fetching your file structure" : `Importing ${selectedCount} frame${selectedCount !== 1 ? "s" : ""}`}
+              {step === "loading" ? "Fetching your file structure" : `Importing ${selectedCount} frame${selectedCount !== 1 ? "s" : ""} at 2× resolution`}
             </p>
           </div>
         </div>
