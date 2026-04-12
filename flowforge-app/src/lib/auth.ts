@@ -1,9 +1,13 @@
+export type UserRole = "developer" | "designer" | "product_manager";
+
 export interface MockUser {
   name: string;
   email: string;
+  role?: UserRole;
 }
 
 const KEY = "ff_user";
+const ONBOARDING_KEY = "ff_onboarding_done";
 
 export function setUser(user: MockUser): void {
   if (typeof window !== "undefined") {
@@ -24,6 +28,17 @@ export function getUser(): MockUser | null {
 export function clearUser(): void {
   if (typeof window !== "undefined") {
     localStorage.removeItem(KEY);
+  }
+}
+
+export function isOnboardingDone(): boolean {
+  if (typeof window === "undefined") return false;
+  return localStorage.getItem(ONBOARDING_KEY) === "1";
+}
+
+export function markOnboardingDone(): void {
+  if (typeof window !== "undefined") {
+    localStorage.setItem(ONBOARDING_KEY, "1");
   }
 }
 

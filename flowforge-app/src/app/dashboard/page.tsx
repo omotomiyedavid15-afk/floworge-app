@@ -28,16 +28,6 @@ interface Project {
 
 type Filter = "all" | "recent" | "shared";
 
-// ── Initial project data ──────────────────────────────────────────────────────
-
-const SEED_PROJECTS: Project[] = [
-  { id: "proj-1", name: "Mobile Banking App",  screens: 12, annotations: 34, updatedAt: "2 hours ago",  category: "recent"  },
-  { id: "proj-2", name: "Design System v3",    screens:  8, annotations: 19, updatedAt: "yesterday",    category: "shared"  },
-  { id: "proj-3", name: "Checkout Redesign",   screens:  5, annotations:  7, updatedAt: "3 days ago",   category: "recent"  },
-  { id: "proj-4", name: "Onboarding Revamp",   screens:  9, annotations: 22, updatedAt: "1 week ago",   category: "shared"  },
-  { id: "proj-5", name: "Marketing Site",      screens:  6, annotations: 11, updatedAt: "2 weeks ago",  category: "recent"  },
-];
-
 // (NewProjectModal is imported from @/components/ui/NewProjectModal)
 
 // ── User avatar dropdown ──────────────────────────────────────────────────────
@@ -125,7 +115,7 @@ function UserMenu({ user, onLogout }: { user: MockUser; onLogout: () => void }) 
 export default function DashboardPage() {
   const router = useRouter();
   const [user, setUserState] = useState<MockUser | null>(null);
-  const [projects, setProjects] = useState<Project[]>(SEED_PROJECTS);
+  const [projects, setProjects] = useState<Project[]>([]);
   const [activeProject, setActiveProject] = useState<string | null>(null);
   const [notifOpen, setNotifOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
@@ -384,6 +374,75 @@ export default function DashboardPage() {
         </div>
 
         {/* Project grid */}
+        {/* True empty state — no projects created yet */}
+        {projects.length === 0 && (
+          <div className="flex flex-col items-center gap-10 py-16 text-center">
+            {/* Illustration */}
+            <div className="relative w-48 h-32 select-none" aria-hidden="true">
+              {[0, 1, 2].map((i) => (
+                <div
+                  key={i}
+                  className="absolute rounded-[10px] border border-[rgba(255,255,255,0.08)] bg-[#1a1a1a]"
+                  style={{
+                    width: 100,
+                    height: 72,
+                    left: i * 22,
+                    top: i * 10,
+                    zIndex: 3 - i,
+                    transform: `rotate(${(i - 1) * 4}deg)`,
+                    boxShadow: "0 4px 24px rgba(0,0,0,0.4)",
+                  }}
+                >
+                  <div className="h-5 bg-[#111] rounded-t-[10px] border-b border-[rgba(255,255,255,0.06)]" />
+                  <div className="p-2 flex flex-col gap-1.5">
+                    <div className="h-1.5 rounded-full bg-[rgba(255,255,255,0.08)]" style={{ width: "60%" }} />
+                    <div className="h-1 rounded-full bg-[rgba(255,255,255,0.05)]" style={{ width: "80%" }} />
+                    <div className="h-1 rounded-full bg-[rgba(255,255,255,0.05)]" style={{ width: "45%" }} />
+                    {i === 0 && <div className="mt-1 h-4 rounded-sm bg-[rgba(24,226,153,0.15)] border border-[rgba(24,226,153,0.2)]" />}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="flex flex-col gap-2">
+              <h2 className="text-[#ededed]" style={{ fontSize: "22px", fontWeight: 400, letterSpacing: "-0.44px" }}>
+                Your workspace is empty
+              </h2>
+              <p className="text-[#666666] max-w-sm mx-auto" style={{ fontSize: "14px", fontWeight: 330, letterSpacing: "-0.14px", lineHeight: 1.6 }}>
+                Import a Figma file to get started. FlowForge will turn your designs into an inspectable, annotated canvas.
+              </p>
+            </div>
+
+            <div className="flex flex-col sm:flex-row items-center gap-3">
+              <Button variant="black-pill" size="md" onClick={() => setNewProjectOpen(true)}>
+                + Create first project
+              </Button>
+              <Button variant="glass-dark" size="md" onClick={() => setImportOpen(true)}>
+                Import from Figma
+              </Button>
+            </div>
+
+            <div className="flex items-center gap-8 pt-2">
+              {[
+                { label: "Paste Figma link", icon: "M5 12h14M12 5l7 7-7 7" },
+                { label: "Select frames", icon: "M3 5h4v4H3zM10 5h4v4h-4zM17 5h4v4h-4zM3 12h4v4H3z" },
+                { label: "AI annotates", icon: "M12 2l3 7h7l-5.5 4 2 7L12 16l-6.5 4 2-7L2 9h7z" },
+              ].map((step, i) => (
+                <div key={i} className="flex flex-col items-center gap-2">
+                  <div className="w-9 h-9 rounded-full border border-[rgba(255,255,255,0.08)] bg-[#1a1a1a] flex items-center justify-center">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.3)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                      <path d={step.icon} />
+                    </svg>
+                  </div>
+                  <span className="text-[#555555]" style={{ fontSize: "11px", fontWeight: 330, letterSpacing: "-0.05px" }}>
+                    {step.label}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {filteredProjects.length > 0 ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-px bg-[rgba(255,255,255,0.06)]">
             {filteredProjects.map((project) => (

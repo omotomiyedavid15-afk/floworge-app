@@ -64,7 +64,7 @@ export default function SignupPage() {
     setLoading(true);
     setTimeout(() => {
       setUser({ name: name.trim(), email });
-      router.push("/dashboard");
+      router.push("/onboarding");
     }, 700);
   }
 
