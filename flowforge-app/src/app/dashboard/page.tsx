@@ -22,6 +22,8 @@ interface Project {
   updatedAt: string;
   category: "recent" | "shared";
   invitees?: string[];
+  figmaUrl?: string;
+  figmaToken?: string;
 }
 
 type Filter = "all" | "recent" | "shared";
@@ -127,6 +129,8 @@ export default function DashboardPage() {
   const [activeProject, setActiveProject] = useState<string | null>(null);
   const [notifOpen, setNotifOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
+  const [importFigmaUrl, setImportFigmaUrl] = useState("");
+  const [importFigmaToken, setImportFigmaToken] = useState("");
   const [newProjectOpen, setNewProjectOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<Filter>("all");
@@ -159,9 +163,18 @@ export default function DashboardPage() {
       updatedAt: "just now",
       category: "recent",
       invitees: data.invitees.length > 0 ? data.invitees : undefined,
+      figmaUrl: data.figmaUrl || undefined,
+      figmaToken: data.figmaToken || undefined,
     };
     setProjects((prev) => [newProject, ...prev]);
     setActiveProject(id);
+
+    // Auto-open import if Figma credentials were provided during creation
+    if (data.figmaUrl && data.figmaToken) {
+      setImportFigmaUrl(data.figmaUrl);
+      setImportFigmaToken(data.figmaToken);
+      setImportOpen(true);
+    }
   }
 
   const filteredProjects = useMemo(() => {
@@ -198,7 +211,11 @@ export default function DashboardPage() {
               </span>
             </div>
             <div className="flex items-center gap-2">
-              <Button variant="glass-dark" size="sm" onClick={() => setImportOpen(true)}>
+              <Button variant="glass-dark" size="sm" onClick={() => {
+                setImportFigmaUrl(project?.figmaUrl ?? "");
+                setImportFigmaToken(project?.figmaToken ?? "");
+                setImportOpen(true);
+              }}>
                 Import frames
               </Button>
               <Link href={`/workspace/${activeProject}`}>
@@ -225,7 +242,11 @@ export default function DashboardPage() {
                   Paste a Figma file URL to begin
                 </p>
               </div>
-              <Button variant="black-pill" size="sm" onClick={() => setImportOpen(true)}>
+              <Button variant="black-pill" size="sm" onClick={() => {
+                setImportFigmaUrl(project?.figmaUrl ?? "");
+                setImportFigmaToken(project?.figmaToken ?? "");
+                setImportOpen(true);
+              }}>
                 Connect Figma file
               </Button>
             </div>
@@ -243,7 +264,12 @@ export default function DashboardPage() {
             </p>
           </div>
         </aside>
-        <ImportModal isOpen={importOpen} onClose={() => setImportOpen(false)} />
+        <ImportModal
+          isOpen={importOpen}
+          onClose={() => { setImportOpen(false); setImportFigmaUrl(""); setImportFigmaToken(""); }}
+          initialFigmaUrl={importFigmaUrl}
+          initialFigmaToken={importFigmaToken}
+        />
       </div>
     );
   }
@@ -465,7 +491,12 @@ export default function DashboardPage() {
       </main>
 
       {/* Modals */}
-      <ImportModal isOpen={importOpen} onClose={() => setImportOpen(false)} />
+      <ImportModal
+        isOpen={importOpen}
+        onClose={() => { setImportOpen(false); setImportFigmaUrl(""); setImportFigmaToken(""); }}
+        initialFigmaUrl={importFigmaUrl}
+        initialFigmaToken={importFigmaToken}
+      />
       {newProjectOpen && (
         <NewProjectModal
           onClose={() => setNewProjectOpen(false)}

@@ -92,6 +92,6 @@ export async function getFrameImages(
  * Extracts file key from Figma URL
  */
 export function extractFileKey(url: string): string | null {
-  const match = url.match(/figma\.com\/file\/([a-zA-Z0-9]+)/);
+  const match = url.match(/figma\.com\/(?:file|design)\/([a-zA-Z0-9]+)/);
   return match ? match[1] : null;
 }
