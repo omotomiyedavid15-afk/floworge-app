@@ -9,7 +9,6 @@
     "lint": "eslint"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.20.0",
     "@prisma/client": "^5.0.0",
     "@supabase/storage-js": "^2.5.5",
     "@xyflow/react": "^12.10.2",
