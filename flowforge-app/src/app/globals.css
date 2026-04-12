@@ -1,0 +1,358 @@
+@import "tailwindcss";
+
+/* ═══════════════════════════════════════════════════════════════
+   FLOWFORGE DESIGN SYSTEM — Mintlify-Inspired
+   White canvas · brand green accent · full-pill geometry
+   Atmospheric gradient hero · barely-there borders
+   ═══════════════════════════════════════════════════════════════ */
+
+@theme inline {
+  /* ── Colors ── */
+  --color-black: #ededed;          /* near-white — primary text on dark canvas */
+  --color-white: #ffffff;
+  --color-brand: #18e299;          /* signature green accent */
+  --color-brand-light: #d4fae8;    /* tinted green surface */
+  --color-brand-deep: #0fa76e;     /* text on light green badges */
+  --color-glass-dark: rgba(0, 0, 0, 0.08);
+  --color-glass-light: rgba(255, 255, 255, 0.16);
+  --color-gray-50: #fafafa;
+  --color-gray-100: #f5f5f5;
+  --color-gray-200: #e5e5e5;
+  --color-gray-300: #d4d4d4;
+  --color-gray-400: #888888;
+  --color-gray-500: #666666;
+  --color-gray-600: #525252;
+  --color-gray-700: #c0c0c0;
+  --color-gray-800: #1a1a1a;
+  --color-gray-900: #0d0d0d;
+
+  /* ── Typography ── */
+  --font-sans: var(--font-inter), "Inter", system-ui, -apple-system, sans-serif;
+  --font-mono: var(--font-jetbrains-mono), "Geist Mono", "JetBrains Mono", ui-monospace, monospace;
+
+  /* ── Spacing (8px base) ── */
+  --spacing-0: 0px;
+  --spacing-0_5: 1px;
+  --spacing-1: 2px;
+  --spacing-1_5: 4px;
+  --spacing-2: 8px;
+  --spacing-2_5: 10px;
+  --spacing-3: 12px;
+  --spacing-4: 16px;
+  --spacing-4_5: 18px;
+  --spacing-5: 20px;
+  --spacing-6: 24px;
+  --spacing-8: 32px;
+  --spacing-10: 40px;
+  --spacing-12: 48px;
+  --spacing-16: 64px;
+  --spacing-20: 80px;
+  --spacing-24: 96px;
+
+  /* ── Border Radius ── */
+  --radius-xs: 2px;
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-card: 16px;
+  --radius-card-featured: 24px;
+  --radius-pill: 9999px;
+  --radius-circle: 50%;
+}
+
+/* ── Root & Base ── */
+:root {
+  --color-background: #0d0d0d;
+  --color-foreground: #ededed;
+  --color-surface: #141414;
+  --color-surface-raised: #1a1a1a;
+}
+
+/* ── Global Reset Enhancements ── */
+*,
+*::before,
+*::after {
+  font-feature-settings: "kern" 1;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  background: #0d0d0d;
+  color: #ededed;
+  font-family: var(--font-sans);
+  font-weight: 400;
+  letter-spacing: normal;
+  line-height: 1.5;
+}
+
+/* ── Selection ── */
+::selection {
+  background: #18e299;
+  color: #0d0d0d;
+}
+
+/* ── Focus: Brand green ring (Mintlify signature) ── */
+:focus-visible {
+  outline: 1px solid #18e299;
+  outline-offset: 2px;
+}
+
+/* ── Scrollbar ── */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--color-gray-300);
+  border-radius: var(--radius-pill);
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-gray-400);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   TYPOGRAPHY CLASSES — DESIGN.md Hierarchy
+   ═══════════════════════════════════════════════════════════════ */
+
+.text-display {
+  font-size: 4rem; /* 64px */
+  font-weight: 600;
+  line-height: 1.15;
+  letter-spacing: -1.28px;
+}
+
+.text-section-heading {
+  font-size: 2.5rem; /* 40px */
+  font-weight: 600;
+  line-height: 1.10;
+  letter-spacing: -0.8px;
+}
+
+.text-subheading {
+  font-size: 1.5rem; /* 24px */
+  font-weight: 500;
+  line-height: 1.30;
+  letter-spacing: -0.24px;
+}
+
+.text-subheading-light {
+  font-size: 1.5rem;
+  font-weight: 400;
+  line-height: 1.30;
+  letter-spacing: -0.24px;
+}
+
+.text-card-title {
+  font-size: 1.25rem; /* 20px */
+  font-weight: 600;
+  line-height: 1.30;
+  letter-spacing: -0.2px;
+}
+
+.text-feature-title {
+  font-size: 1.25rem; /* 20px */
+  font-weight: 600;
+  line-height: 1.30;
+  letter-spacing: -0.2px;
+}
+
+.text-body-large {
+  font-size: 1.125rem; /* 18px */
+  font-weight: 400;
+  line-height: 1.50;
+  letter-spacing: normal;
+}
+
+.text-body {
+  font-size: 1rem; /* 16px */
+  font-weight: 400;
+  line-height: 1.50;
+  letter-spacing: normal;
+}
+
+.text-body-medium {
+  font-size: 1rem; /* 16px */
+  font-weight: 500;
+  line-height: 1.50;
+  letter-spacing: normal;
+}
+
+.text-body-light {
+  font-size: 1rem;
+  font-weight: 400;
+  line-height: 1.50;
+  letter-spacing: normal;
+  color: #666666;
+}
+
+.text-caption {
+  font-size: 0.875rem; /* 14px */
+  font-weight: 400;
+  line-height: 1.50;
+  letter-spacing: normal;
+}
+
+.text-label-upper {
+  font-size: 0.8125rem; /* 13px */
+  font-weight: 500;
+  line-height: 1.50;
+  letter-spacing: 0.65px;
+  text-transform: uppercase;
+}
+
+.text-small {
+  font-size: 0.8125rem; /* 13px */
+  font-weight: 400;
+  line-height: 1.50;
+  letter-spacing: -0.26px;
+}
+
+.text-mono-label {
+  font-family: var(--font-mono);
+  font-size: 0.75rem; /* 12px */
+  font-weight: 500;
+  line-height: 1.50;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+}
+
+.text-mono-small {
+  font-family: var(--font-mono);
+  font-size: 0.75rem; /* 12px */
+  font-weight: 500;
+  line-height: 1.50;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+}
+
+.text-mono-micro {
+  font-family: var(--font-mono);
+  font-size: 0.625rem; /* 10px */
+  font-weight: 500;
+  line-height: 1.50;
+  text-transform: uppercase;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   GRADIENTS — Atmospheric Hero & Accents
+   ═══════════════════════════════════════════════════════════════ */
+
+/* Atmospheric dark green wash — dark mode hero */
+.gradient-hero {
+  background:
+    radial-gradient(ellipse 100% 65% at 50% -5%, rgba(24, 226, 153, 0.14) 0%, rgba(24, 226, 153, 0.04) 50%, transparent 70%),
+    #0d0d0d;
+}
+
+/* Subtle tint for secondary sections */
+.gradient-hero-subtle {
+  background: linear-gradient(160deg, #f0fdf8 0%, #ffffff 50%);
+}
+
+/* Brand green gradient strip */
+.gradient-brand-strip {
+  background: linear-gradient(90deg, #18e299 0%, #0fa76e 100%);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   ANIMATIONS
+   ═══════════════════════════════════════════════════════════════ */
+
+@keyframes fade-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fade-in-up {
+  from { opacity: 0; transform: translateY(24px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slide-in-right {
+  from { opacity: 0; transform: translateX(16px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes slide-in-left {
+  from { opacity: 0; transform: translateX(-16px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes scale-in {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-12px); }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.5s ease-out forwards;
+}
+
+.animate-fade-in-up {
+  animation: fade-in-up 0.6s ease-out forwards;
+}
+
+.animate-slide-in-right {
+  animation: slide-in-right 0.4s ease-out forwards;
+}
+
+.animate-slide-in-left {
+  animation: slide-in-left 0.4s ease-out forwards;
+}
+
+.animate-scale-in {
+  animation: scale-in 0.3s ease-out forwards;
+}
+
+.animate-float {
+  animation: float 6s ease-in-out infinite;
+}
+
+/* Stagger delays for lists */
+.stagger-1 { animation-delay: 0.05s; }
+.stagger-2 { animation-delay: 0.1s; }
+.stagger-3 { animation-delay: 0.15s; }
+.stagger-4 { animation-delay: 0.2s; }
+.stagger-5 { animation-delay: 0.25s; }
+.stagger-6 { animation-delay: 0.3s; }
+
+/* ═══════════════════════════════════════════════════════════════
+   RESPONSIVE — DESIGN.MD BREAKPOINTS
+   ═══════════════════════════════════════════════════════════════ */
+
+@media (max-width: 960px) {
+  .text-display {
+    font-size: 2.5rem;
+    letter-spacing: -0.8px;
+  }
+  .text-section-heading {
+    font-size: 1.875rem;
+    letter-spacing: -0.5px;
+  }
+}
+
+@media (max-width: 560px) {
+  .text-display {
+    font-size: 2rem;
+    letter-spacing: -0.5px;
+  }
+  .text-section-heading {
+    font-size: 1.5rem;
+    letter-spacing: -0.3px;
+  }
+  .text-subheading {
+    font-size: 1.25rem;
+  }
+}

@@ -1,0 +1,105 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                String    @id @default(cuid())
+  email             String    @unique
+  name              String?
+  passwordHash      String?
+  emailVerified     DateTime?
+  twoFactorEnabled  Boolean   @default(false)
+  authProvider      String?   // 'google', 'github', 'email'
+  subscriptionTier  String    @default("free") // 'free', 'pro', 'enterprise'
+  projects          Project[]
+  annotations       Annotation[]
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+}
+
+model Project {
+  id                String    @id @default(cuid())
+  userId            String
+  user              User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name              String
+  description       String?
+  figmaFileKey      String?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  screens           Screen[]
+  flows             Flow[]
+  
+  @@index([userId])
+}
+
+model Screen {
+  id                String    @id @default(cuid())
+  projectId         String
+  project           Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  figmaNodeId       String?
+  backdropUrl       String?   // URL to stored image in Supabase Storage
+  nodeTreeJSON      Json?     // Figma node tree for this frame
+  processingStatus  String    @default("queued") // 'queued', 'processing', 'partial', 'done', 'failed'
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  annotations       Annotation[]
+  
+  @@index([projectId])
+}
+
+model Annotation {
+  id                String    @id @default(cuid())
+  screenId          String
+  screen            Screen    @relation(fields: [screenId], references: [id], onDelete: Cascade)
+  userId            String
+  user              User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  x                 Int       // canvas x coordinate
+  y                 Int       // canvas y coordinate
+  w                 Int       // width
+  h                 Int       // height
+  type              String    // 'Button', 'Input', 'Label', etc.
+  elementName       String?   // user-given name
+  interaction       String?   // what happens on click
+  validation        String?   // validation rules
+  errorState        String?   // error description
+  successState      String?   // success description
+  devNotes          String?   // dev implementation notes
+  isAIGenerated     Boolean   @default(false)
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  
+  @@index([screenId])
+  @@index([userId])
+}
+
+model Flow {
+  id                String    @id @default(cuid())
+  projectId         String
+  project           Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  name              String    // e.g. "User Onboarding"
+  nodesJSON         Json      // Array of nodes: {id, screenId, label, position}
+  edgesJSON         Json      // Array of edges: {source, target, label}
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  
+  @@index([projectId])
+}
+
+model FigmaToken {
+  id                String    @id @default(cuid())
+  userId            String    @unique
+  // ── SECURITY: This field MUST be encrypted at rest before storing in the database. ──
+  // Use Node.js crypto module with a secret key (FIGMA_TOKEN_ENCRYPTION_SECRET).
+  encryptedToken    String    // Figma PAT encrypted at rest
+  expiresAt         DateTime?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+}
