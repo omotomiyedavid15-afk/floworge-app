@@ -9,7 +9,7 @@ Design-to-engineering handoff tool. Import Figma designs as structured, inspecta
 - **Language**: TypeScript
 - **Styling**: Tailwind CSS v4
 - **Database ORM**: Prisma (PostgreSQL)
-- **AI**: Anthropic Claude SDK (screen analysis)
+- **AI**: Groq API — `llama-3.3-70b-versatile` (screen analysis)
 - **Canvas**: Konva / react-konva, @xyflow/react
 - **Storage**: @supabase/storage-js (Figma frame images)
 
@@ -23,7 +23,7 @@ Command: `cd flowforge-app && npx next dev -p 5000 -H 0.0.0.0`
 | Secret | Purpose |
 |---|---|
 | `DATABASE_URL` | PostgreSQL connection string (set by Replit DB) |
-| `ANTHROPIC_API_KEY` | Enables AI-powered screen analysis |
+| `GROQ_API_KEY` | Enables AI-powered screen analysis via Groq |
 | `FIGMA_TOKEN_ENCRYPTION_SECRET` | Encrypts Figma PATs stored in the database |
 
 ## Key Directories

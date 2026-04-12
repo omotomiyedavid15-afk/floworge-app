@@ -9,7 +9,7 @@ if (!GROQ_API_KEY) {
 }
 
 const GROQ_API_URL = "https://api.groq.com/openai/v1/chat/completions";
-const GROQ_MODEL = "llama3-8b-8192";
+const GROQ_MODEL = "llama-3.3-70b-versatile";
 
 async function groqChat(prompt: string, maxTokens = 1024): Promise<string> {
   const res = await fetch(GROQ_API_URL, {
@@ -20,8 +20,12 @@ async function groqChat(prompt: string, maxTokens = 1024): Promise<string> {
     },
     body: JSON.stringify({
       model: GROQ_MODEL,
-      max_tokens: maxTokens,
       messages: [{ role: "user", content: prompt }],
+      temperature: 1,
+      max_completion_tokens: maxTokens,
+      top_p: 1,
+      stream: false,
+      stop: null,
     }),
   });
 
