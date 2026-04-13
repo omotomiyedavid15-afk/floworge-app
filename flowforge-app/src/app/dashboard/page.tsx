@@ -8,7 +8,8 @@ import NewProjectModal, { type NewProjectData } from "@/components/ui/NewProject
 import Link from "next/link";
 import { useState, useMemo, useEffect, useRef } from "react"; // useRef used by UserMenu
 import { useRouter } from "next/navigation";
-import { getUser, clearUser, getInitials, type MockUser } from "@/lib/auth";
+import { useSession, signOut as nextAuthSignOut } from "next-auth/react";
+import { getUser, clearUser, getInitials, nameFromEmail, type MockUser } from "@/lib/auth";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -114,6 +115,7 @@ function UserMenu({ user, onLogout }: { user: MockUser; onLogout: () => void }) 
 
 export default function DashboardPage() {
   const router = useRouter();
+  const { data: session, status: sessionStatus } = useSession();
   const [user, setUserState] = useState<MockUser | null>(null);
   const [projects, setProjects] = useState<Project[]>([]);
   const [activeProject, setActiveProject] = useState<string | null>(null);
@@ -126,19 +128,32 @@ export default function DashboardPage() {
   const [filter, setFilter] = useState<Filter>("all");
   const [unreadCount, setUnreadCount] = useState(3);
 
-  // Auth guard
+  // Auth guard — supports both NextAuth (OAuth) and localStorage (mock) sessions
   useEffect(() => {
+    if (sessionStatus === "loading") return;
+    if (sessionStatus === "authenticated" && session?.user) {
+      setUserState({
+        name: session.user.name ?? nameFromEmail(session.user.email ?? ""),
+        email: session.user.email ?? "",
+      });
+      return;
+    }
+    // Fall back to localStorage mock auth
     const u = getUser();
     if (!u) {
       router.replace("/login");
     } else {
       setUserState(u);
     }
-  }, [router]);
+  }, [sessionStatus, session, router]);
 
-  function handleLogout() {
+  async function handleLogout() {
     clearUser();
-    router.push("/login");
+    if (sessionStatus === "authenticated") {
+      await nextAuthSignOut({ callbackUrl: "/login" });
+    } else {
+      router.push("/login");
+    }
   }
 
   function handleCreateProject(data: NewProjectData) {
@@ -178,7 +193,7 @@ export default function DashboardPage() {
     });
   }, [projects, search, filter]);
 
-  if (!user) return null; // waiting for auth check
+  if (sessionStatus === "loading" || !user) return null;
 
   if (activeProject) {
     const project = projects.find((p) => p.id === activeProject)!;

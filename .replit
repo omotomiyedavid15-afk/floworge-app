@@ -32,3 +32,9 @@ waitForPort = 5000
 [[ports]]
 localPort = 5000
 externalPort = 80
+
+[userenv]
+
+[userenv.shared]
+AUTH_URL = "https://a58d48ae-078b-40a1-8b4b-fbd1cc257dc6-00-3bpqbajm90cbp.kirk.replit.dev"
+NEXTAUTH_URL = "https://a58d48ae-078b-40a1-8b4b-fbd1cc257dc6-00-3bpqbajm90cbp.kirk.replit.dev"

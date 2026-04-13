@@ -1,6 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -10,96 +7,146 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// ── Auth (NextAuth / Auth.js v5 compatible) ───────────────────────────────────
+
 model User {
   id                String    @id @default(cuid())
-  email             String    @unique
   name              String?
-  passwordHash      String?
+  email             String?   @unique
   emailVerified     DateTime?
+  image             String?
+  passwordHash      String?
   twoFactorEnabled  Boolean   @default(false)
-  authProvider      String?   // 'google', 'github', 'email'
-  subscriptionTier  String    @default("free") // 'free', 'pro', 'enterprise'
+  authProvider      String?
+  subscriptionTier  String    @default("free")
+  role              String?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  accounts          Account[]
+  sessions          Session[]
   projects          Project[]
   annotations       Annotation[]
-  createdAt         DateTime  @default(now())
-  updatedAt         DateTime  @updatedAt
 }
 
-model Project {
-  id                String    @id @default(cuid())
+model Account {
+  id                String  @id @default(cuid())
   userId            String
-  user              User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  name              String
-  description       String?
-  figmaFileKey      String?
-  createdAt         DateTime  @default(now())
-  updatedAt         DateTime  @updatedAt
-  screens           Screen[]
-  flows             Flow[]
-  
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model VerificationToken {
+  identifier String
+  token      String
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+// ── App Models ────────────────────────────────────────────────────────────────
+
+model Project {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name        String
+  description String?
+  figmaFileKey String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  screens     Screen[]
+  flows       Flow[]
+
   @@index([userId])
 }
 
 model Screen {
-  id                String    @id @default(cuid())
-  projectId         String
-  project           Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  figmaNodeId       String?
-  backdropUrl       String?   // URL to stored image in Supabase Storage
-  nodeTreeJSON      Json?     // Figma node tree for this frame
-  processingStatus  String    @default("queued") // 'queued', 'processing', 'partial', 'done', 'failed'
-  createdAt         DateTime  @default(now())
-  updatedAt         DateTime  @updatedAt
-  annotations       Annotation[]
-  
+  id               String   @id @default(cuid())
+  projectId        String
+  project          Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  figmaNodeId      String?
+  backdropUrl      String?
+  nodeTreeJSON     Json?
+  processingStatus String   @default("queued")
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  annotations      Annotation[]
+
   @@index([projectId])
 }
 
 model Annotation {
-  id                String    @id @default(cuid())
-  screenId          String
-  screen            Screen    @relation(fields: [screenId], references: [id], onDelete: Cascade)
-  userId            String
-  user              User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  x                 Int       // canvas x coordinate
-  y                 Int       // canvas y coordinate
-  w                 Int       // width
-  h                 Int       // height
-  type              String    // 'Button', 'Input', 'Label', etc.
-  elementName       String?   // user-given name
-  interaction       String?   // what happens on click
-  validation        String?   // validation rules
-  errorState        String?   // error description
-  successState      String?   // success description
-  devNotes          String?   // dev implementation notes
-  isAIGenerated     Boolean   @default(false)
-  createdAt         DateTime  @default(now())
-  updatedAt         DateTime  @updatedAt
-  
+  id           String   @id @default(cuid())
+  screenId     String
+  screen       Screen   @relation(fields: [screenId], references: [id], onDelete: Cascade)
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  x            Int
+  y            Int
+  w            Int
+  h            Int
+  type         String
+  elementName  String?
+  interaction  String?
+  validation   String?
+  errorState   String?
+  successState String?
+  devNotes     String?
+  isAIGenerated Boolean @default(false)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
   @@index([screenId])
   @@index([userId])
 }
 
 model Flow {
-  id                String    @id @default(cuid())
-  projectId         String
-  project           Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  name              String    // e.g. "User Onboarding"
-  nodesJSON         Json      // Array of nodes: {id, screenId, label, position}
-  edgesJSON         Json      // Array of edges: {source, target, label}
-  createdAt         DateTime  @default(now())
-  updatedAt         DateTime  @updatedAt
-  
+  id        String   @id @default(cuid())
+  projectId String
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  name      String
+  nodesJSON Json
+  edgesJSON Json
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
   @@index([projectId])
 }
 
 model FigmaToken {
-  id                String    @id @default(cuid())
-  userId            String    @unique
-  // ── SECURITY: This field MUST be encrypted at rest before storing in the database. ──
-  // Use Node.js crypto module with a secret key (FIGMA_TOKEN_ENCRYPTION_SECRET).
-  encryptedToken    String    // Figma PAT encrypted at rest
-  expiresAt         DateTime?
-  createdAt         DateTime  @default(now())
-  updatedAt         DateTime  @updatedAt
+  id             String    @id @default(cuid())
+  userId         String    @unique
+  encryptedToken String
+  expiresAt      DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
 }
