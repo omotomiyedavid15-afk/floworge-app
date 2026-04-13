@@ -1,19 +1,9 @@
 import type { NextAuthConfig } from "next-auth";
-import GitHub from "next-auth/providers/github";
-import Google from "next-auth/providers/google";
 
-// Lightweight config without the Prisma adapter — safe for Edge/middleware runtime.
+// Lightweight config — Edge-safe (no Prisma, no bcrypt).
+// Providers are declared in auth.ts (Node.js runtime only).
 export const authConfig: NextAuthConfig = {
-  providers: [
-    GitHub({
-      clientId: process.env.GITHUB_CLIENT_ID!,
-      clientSecret: process.env.GITHUB_CLIENT_SECRET!,
-    }),
-    Google({
-      clientId: process.env.GOOGLE_CLIENT_ID!,
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
-    }),
-  ],
+  providers: [],
   session: { strategy: "jwt" },
   pages: {
     signIn: "/login",
@@ -28,7 +18,11 @@ export const authConfig: NextAuthConfig = {
       return true;
     },
     jwt({ token, user }) {
-      if (user) token.id = user.id;
+      if (user) {
+        token.id = user.id;
+        token.name = user.name;
+        token.email = user.email;
+      }
       return token;
     },
     session({ session, token }) {
