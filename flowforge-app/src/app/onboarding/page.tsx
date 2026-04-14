@@ -160,6 +160,8 @@ export default function OnboardingPage() {
   const router = useRouter();
   const [step, setStep] = useState(0);
   const [selectedRole, setSelectedRole] = useState<UserRole | null>(null);
+  const [figmaToken, setFigmaToken] = useState("");
+  const [showToken, setShowToken] = useState(false);
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
@@ -185,6 +187,11 @@ export default function OnboardingPage() {
       const user = getUser();
       if (user) setUser({ ...user, role: selectedRole });
       setStep(1);
+    } else if (step === 1) {
+      if (figmaToken.trim()) {
+        localStorage.setItem("ff_figma_token", figmaToken.trim());
+      }
+      setStep(2);
     } else {
       markOnboardingDone();
       router.push("/dashboard");
@@ -225,7 +232,7 @@ export default function OnboardingPage() {
             FlowForge
           </span>
         </Link>
-        <StepDots current={step} total={2} />
+        <StepDots current={step} total={3} />
         <button
           onClick={() => { markOnboardingDone(); router.push("/dashboard"); }}
           className="text-[#555555] hover:text-[#888888] transition-colors focus-visible:outline focus-visible:outline-1 focus-visible:outline-[#18e299] rounded-sm"
@@ -313,8 +320,102 @@ export default function OnboardingPage() {
           </div>
         )}
 
-        {/* ── Step 1: Feature highlights ── */}
-        {step === 1 && roleData && (
+        {/* ── Step 1: Figma token ── */}
+        {step === 1 && (
+          <div className="w-full max-w-md flex flex-col items-center gap-8 animate-scale-in">
+            <div className="flex flex-col items-center gap-2 text-center">
+              {/* Figma icon */}
+              <div className="w-14 h-14 rounded-[14px] flex items-center justify-center bg-[rgba(255,255,255,0.06)] mb-1">
+                <svg width="28" height="28" viewBox="0 0 38 57" fill="none" aria-hidden="true">
+                  <path d="M19 28.5C19 25.48 21.48 23 24.5 23C27.52 23 30 25.48 30 28.5C30 31.52 27.52 34 24.5 34C21.48 34 19 31.52 19 28.5Z" fill="#1ABCFE"/>
+                  <path d="M8 39.5C8 36.48 10.48 34 13.5 34H19V39.5C19 42.52 16.52 45 13.5 45C10.48 45 8 42.52 8 39.5Z" fill="#0ACF83"/>
+                  <path d="M19 6V17H24.5C27.52 17 30 14.52 30 11.5C30 8.48 27.52 6 24.5 6H19Z" fill="#FF7262"/>
+                  <path d="M8 11.5C8 14.52 10.48 17 13.5 17H19V6H13.5C10.48 6 8 8.48 8 11.5Z" fill="#F24E1E"/>
+                  <path d="M8 22.5C8 25.52 10.48 28 13.5 28H19V17H13.5C10.48 17 8 19.48 8 22.5Z" fill="#FF7262"/>
+                </svg>
+              </div>
+              <h1
+                className="text-[#ededed]"
+                style={{ fontSize: "30px", fontWeight: 400, letterSpacing: "-0.6px", lineHeight: 1.2 }}
+              >
+                Connect Figma
+              </h1>
+              <p className="text-[#666666]" style={{ fontSize: "15px", fontWeight: 330, letterSpacing: "-0.15px", lineHeight: 1.6 }}>
+                Add your Personal Access Token once and FlowForge will use it automatically every time you import a file.
+              </p>
+            </div>
+
+            <div className="w-full flex flex-col gap-4 bg-[#1a1a1a] border border-[rgba(255,255,255,0.07)] rounded-[14px] p-5">
+              <div className="flex flex-col gap-1.5">
+                <label htmlFor="figma-token" className="text-[#888888]" style={{ fontSize: "12px", fontWeight: 450, letterSpacing: "-0.05px" }}>
+                  Personal Access Token
+                </label>
+                <div className="relative">
+                  <input
+                    id="figma-token"
+                    type={showToken ? "text" : "password"}
+                    value={figmaToken}
+                    onChange={(e) => setFigmaToken(e.target.value)}
+                    placeholder="figd_••••••••••••••••••••••••••••"
+                    className="w-full border border-[rgba(255,255,255,0.08)] rounded-[8px] px-3 py-2.5 pr-10 text-sm text-[#ededed] placeholder:text-[#444444] bg-[#111111] transition-colors hover:border-[rgba(255,255,255,0.15)] focus-visible:outline focus-visible:outline-1 focus-visible:outline-[#18e299] focus-visible:outline-offset-2"
+                    style={{ fontFamily: figmaToken && !showToken ? "monospace" : "inherit", letterSpacing: "-0.1px" }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowToken((v) => !v)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-[#555555] hover:text-[#888888] transition-colors"
+                    aria-label={showToken ? "Hide token" : "Show token"}
+                  >
+                    {showToken ? (
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.07a3 3 0 11-4.24-4.24"/>
+                        <line x1="1" y1="1" x2="23" y2="23"/>
+                      </svg>
+                    ) : (
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
+                      </svg>
+                    )}
+                  </button>
+                </div>
+              </div>
+
+              {/* How-to hint */}
+              <div className="flex items-start gap-2.5 px-3 py-2.5 rounded-[8px] bg-[rgba(255,255,255,0.03)] border border-[rgba(255,255,255,0.05)]">
+                <svg width="14" height="14" viewBox="0 0 14 14" fill="none" className="mt-0.5 shrink-0 text-[#555555]">
+                  <circle cx="7" cy="7" r="6" stroke="currentColor" strokeWidth="1.2"/>
+                  <path d="M7 4.5v3M7 9.5v.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
+                </svg>
+                <p className="text-[#666666]" style={{ fontSize: "12px", fontWeight: 330, letterSpacing: "-0.05px", lineHeight: 1.6 }}>
+                  In Figma, go to <span className="text-[#888888]">Account Settings → Personal access tokens</span> and generate a new token. Paste it above.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex flex-col items-center gap-3 w-full">
+              <button
+                onClick={handleNext}
+                className="w-full flex items-center justify-center gap-2 px-7 py-3 rounded-full bg-[#18e299] text-black font-medium hover:bg-[#14cc8a] transition-colors focus-visible:outline focus-visible:outline-1 focus-visible:outline-[#18e299] focus-visible:outline-offset-2"
+                style={{ fontSize: "14px", fontWeight: 520, letterSpacing: "-0.14px" }}
+              >
+                {figmaToken.trim() ? "Save & continue" : "Continue without token"}
+                <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+                  <path d="M3 7h8M8 4l3 3-3 3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+              </button>
+              <button
+                onClick={() => setStep(0)}
+                className="text-[#555555] hover:text-[#888888] transition-colors focus-visible:outline focus-visible:outline-1 focus-visible:outline-[#18e299] rounded-sm"
+                style={{ fontSize: "13px", letterSpacing: "-0.1px" }}
+              >
+                Back
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* ── Step 2: Feature highlights ── */}
+        {step === 2 && roleData && (
           <div className="w-full max-w-xl flex flex-col items-center gap-8 animate-scale-in">
             <div className="flex flex-col items-center gap-2 text-center">
               <div
@@ -369,7 +470,7 @@ export default function OnboardingPage() {
                 </svg>
               </button>
               <button
-                onClick={() => setStep(0)}
+                onClick={() => setStep(1)}
                 className="text-[#555555] hover:text-[#888888] transition-colors focus-visible:outline focus-visible:outline-1 focus-visible:outline-[#18e299] rounded-sm"
                 style={{ fontSize: "13px", letterSpacing: "-0.1px" }}
               >

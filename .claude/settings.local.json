@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx claude-mem:*)",
+      "Bash(echo \"Background PID: $!\")",
+      "Bash(npx prisma:*)",
+      "Bash(DATABASE_URL=\"file:./prisma/dev.db\" npx prisma:*)",
+      "Bash(npx tsc:*)",
+      "Bash(npm install:*)",
+      "WebFetch(domain:www.pinterest.com)",
+      "WebSearch",
+      "WebFetch(domain:dribbble.com)",
+      "Bash(node:*)"
+    ]
+  }
+}

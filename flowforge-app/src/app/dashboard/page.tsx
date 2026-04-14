@@ -9,7 +9,8 @@ import Link from "next/link";
 import { useState, useMemo, useEffect, useRef } from "react"; // useRef used by UserMenu
 import { useRouter } from "next/navigation";
 import { useSession, signOut as nextAuthSignOut } from "next-auth/react";
-import { getUser, clearUser, getInitials, nameFromEmail, type MockUser } from "@/lib/auth";
+import { getUser, clearUser, nameFromEmail, type MockUser } from "@/lib/auth";
+import AvatarIllustration from "@/components/ui/AvatarIllustration";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -21,9 +22,11 @@ interface Project {
   screens: number;
   annotations: number;
   updatedAt: string;
+  createdAt?: string;
   category: "recent" | "shared";
   invitees?: string[];
   figmaUrl?: string;
+  figmaFileKey?: string;
   figmaToken?: string;
 }
 
@@ -35,7 +38,23 @@ type Filter = "all" | "recent" | "shared";
 
 function UserMenu({ user, onLogout }: { user: MockUser; onLogout: () => void }) {
   const [open, setOpen] = useState(false);
+  const [avatarId, setAvatarId] = useState(1);
   const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const saved = localStorage.getItem("ff_avatar_id");
+    if (saved) setAvatarId(parseInt(saved, 10) || 1);
+    function onPick(e: Event) { setAvatarId((e as CustomEvent<number>).detail); }
+    function onStorage(e: StorageEvent) {
+      if (e.key === "ff_avatar_id" && e.newValue) setAvatarId(parseInt(e.newValue, 10) || 1);
+    }
+    window.addEventListener("ff:avatar", onPick);
+    window.addEventListener("storage", onStorage);
+    return () => {
+      window.removeEventListener("ff:avatar", onPick);
+      window.removeEventListener("storage", onStorage);
+    };
+  }, []);
 
   useEffect(() => {
     function handleClick(e: MouseEvent) {
@@ -49,12 +68,11 @@ function UserMenu({ user, onLogout }: { user: MockUser; onLogout: () => void }) 
     <div ref={ref} className="relative">
       <button
         onClick={() => setOpen((v) => !v)}
-        className="w-8 h-8 rounded-full bg-[#1a1a1a] border border-[rgba(255,255,255,0.12)] flex items-center justify-center text-[#ededed] hover:opacity-80 transition-opacity focus-visible:outline focus-visible:outline-1 focus-visible:outline-[#18e299] focus-visible:outline-offset-2"
-        style={{ fontSize: "12px", fontWeight: 540 }}
+        className="w-8 h-8 rounded-full overflow-hidden border border-[rgba(255,255,255,0.12)] hover:opacity-80 transition-opacity focus-visible:outline focus-visible:outline-1 focus-visible:outline-[#18e299] focus-visible:outline-offset-2 shrink-0"
         aria-label="User menu"
         aria-expanded={open}
       >
-        {getInitials(user.name)}
+        <AvatarIllustration avatarId={avatarId} size={32} />
       </button>
 
       {open && (
@@ -68,7 +86,8 @@ function UserMenu({ user, onLogout }: { user: MockUser; onLogout: () => void }) 
             </p>
           </div>
           <div className="p-1.5 flex flex-col gap-0.5">
-            <button
+            <Link
+              href="/settings/profile"
               className="w-full flex items-center gap-2.5 px-3 py-2 rounded-[6px] text-left text-[#ededed] hover:bg-[rgba(255,255,255,0.06)] transition-colors focus-visible:outline focus-visible:outline-1 focus-visible:outline-[#18e299]"
               style={{ fontSize: "13px", fontWeight: 330, letterSpacing: "-0.1px" }}
               onClick={() => setOpen(false)}
@@ -78,8 +97,9 @@ function UserMenu({ user, onLogout }: { user: MockUser; onLogout: () => void }) 
                 <path d="M1.5 12.5c0-2.485 2.462-4.5 5.5-4.5s5.5 2.015 5.5 4.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
               </svg>
               Profile settings
-            </button>
-            <button
+            </Link>
+            <Link
+              href="/settings"
               className="w-full flex items-center gap-2.5 px-3 py-2 rounded-[6px] text-left text-[#ededed] hover:bg-[rgba(255,255,255,0.06)] transition-colors focus-visible:outline focus-visible:outline-1 focus-visible:outline-[#18e299]"
               style={{ fontSize: "13px", fontWeight: 330, letterSpacing: "-0.1px" }}
               onClick={() => setOpen(false)}
@@ -89,7 +109,7 @@ function UserMenu({ user, onLogout }: { user: MockUser; onLogout: () => void }) 
                 <path d="M7 1v1.5M7 11.5V13M1 7h1.5M11.5 7H13M2.93 2.93l1.06 1.06M10.01 10.01l1.06 1.06M2.93 11.07l1.06-1.06M10.01 3.99l1.06-1.06" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
               </svg>
               Settings
-            </button>
+            </Link>
           </div>
           <div className="border-t border-[rgba(255,255,255,0.06)] p-1.5">
             <button
@@ -118,17 +138,21 @@ export default function DashboardPage() {
   const { data: session, status: sessionStatus } = useSession();
   const [user, setUserState] = useState<MockUser | null>(null);
   const [projects, setProjects] = useState<Project[]>([]);
+  const [projectsLoading, setProjectsLoading] = useState(false);
   const [activeProject, setActiveProject] = useState<string | null>(null);
   const [notifOpen, setNotifOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
   const [importFigmaUrl, setImportFigmaUrl] = useState("");
-  const [importFigmaToken, setImportFigmaToken] = useState("");
+  const [importFigmaToken, setImportFigmaToken] = useState(() =>
+    typeof window !== "undefined" ? (localStorage.getItem("ff_figma_token") ?? "") : ""
+  );
   const [newProjectOpen, setNewProjectOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<Filter>("all");
   const [unreadCount, setUnreadCount] = useState(3);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
-  // Auth guard — supports both NextAuth (OAuth) and localStorage (mock) sessions
+  // Auth guard + initial project load
   useEffect(() => {
     if (sessionStatus === "loading") return;
     if (sessionStatus === "authenticated" && session?.user) {
@@ -136,16 +160,37 @@ export default function DashboardPage() {
         name: session.user.name ?? nameFromEmail(session.user.email ?? ""),
         email: session.user.email ?? "",
       });
+      loadProjects();
       return;
     }
-    // Fall back to localStorage mock auth
     const u = getUser();
     if (!u) {
       router.replace("/login");
     } else {
       setUserState(u);
     }
-  }, [sessionStatus, session, router]);
+  }, [sessionStatus, session, router]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  async function loadProjects() {
+    setProjectsLoading(true);
+    try {
+      const res = await fetch("/api/projects");
+      if (res.status === 401) {
+        // Stale JWT — clear session and bounce to login
+        clearUser();
+        await nextAuthSignOut({ callbackUrl: "/login" });
+        return;
+      }
+      if (res.ok) {
+        const data = await res.json();
+        setProjects(data);
+      }
+    } catch {
+      // silently fail — empty state will show
+    } finally {
+      setProjectsLoading(false);
+    }
+  }
 
   async function handleLogout() {
     clearUser();
@@ -156,32 +201,61 @@ export default function DashboardPage() {
     }
   }
 
-  function handleCreateProject(data: NewProjectData) {
-    const id = `proj-${Date.now()}`;
-    const newProject: Project = {
-      id,
-      name: data.name,
-      description: data.description || undefined,
-      coverImage: data.coverImage,
-      screens: 0,
-      annotations: 0,
-      updatedAt: "just now",
-      category: "recent",
-      invitees: data.invitees.length > 0 ? data.invitees : undefined,
-      figmaUrl: data.figmaUrl || undefined,
-      figmaToken: data.figmaToken || undefined,
-    };
-    setProjects((prev) => [newProject, ...prev]);
-    setActiveProject(id);
+  async function handleCreateProject(data: NewProjectData) {
+    try {
+      const res = await fetch("/api/projects", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: data.name,
+          description: data.description || undefined,
+          coverImage: data.coverImage || undefined,
+          figmaUrl: data.figmaUrl || undefined,
+          figmaToken: data.figmaToken || undefined,
+          invitees: data.invitees,
+        }),
+      });
 
-    // Persist figma credentials so the workspace page can read them
-    if (data.figmaUrl && data.figmaToken) {
-      try {
-        localStorage.setItem(`ff_figma_${id}`, JSON.stringify({ url: data.figmaUrl, token: data.figmaToken }));
-      } catch {}
-      setImportFigmaUrl(data.figmaUrl);
-      setImportFigmaToken(data.figmaToken);
-      setImportOpen(true);
+      if (!res.ok) {
+        const errBody = await res.json().catch(() => ({}));
+        console.error("[createProject] API error:", errBody.detail ?? errBody.error);
+        if (res.status === 401) {
+          // Stale JWT — clear session and redirect to login
+          clearUser();
+          await nextAuthSignOut({ callbackUrl: "/login" });
+        }
+        return;
+      }
+
+      const created: Project = await res.json();
+      setProjects((prev) => [created, ...prev]);
+      setActiveProject(created.id);
+
+      if (data.figmaUrl && data.figmaToken) {
+        try {
+          localStorage.setItem(`ff_figma_${created.id}`, JSON.stringify({ url: data.figmaUrl, token: data.figmaToken }));
+        } catch {}
+        setImportFigmaUrl(data.figmaUrl);
+        setImportFigmaToken(data.figmaToken);
+        setImportOpen(true);
+      }
+    } catch (err) {
+      console.error("[createProject]", err);
+    }
+  }
+
+  async function handleDeleteProject(id: string, e: React.MouseEvent) {
+    e.stopPropagation();
+    if (!confirm("Delete this project? This cannot be undone.")) return;
+    setDeletingId(id);
+    try {
+      await fetch(`/api/projects/${id}`, { method: "DELETE" });
+      setProjects((prev) => prev.filter((p) => p.id !== id));
+      if (activeProject === id) setActiveProject(null);
+    } catch {
+      // silently fail
+    } finally {
+      setDeletingId(null);
     }
   }
 
@@ -194,6 +268,26 @@ export default function DashboardPage() {
   }, [projects, search, filter]);
 
   if (sessionStatus === "loading" || !user) return null;
+
+  // ── Loading skeleton ──
+  if (projectsLoading) {
+    return (
+      <div className="flex flex-col min-h-screen bg-[#0d0d0d]">
+        <div className="sticky top-0 z-50 border-b border-[rgba(255,255,255,0.06)] bg-[#141414] h-14" />
+        <main className="mx-auto w-full max-w-5xl px-6 py-12">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-px bg-[rgba(255,255,255,0.06)]">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="bg-[#141414] p-6 flex flex-col gap-4 animate-pulse">
+                <div className="w-full h-36 rounded-[8px] bg-[rgba(255,255,255,0.04)]" />
+                <div className="h-3 rounded-full bg-[rgba(255,255,255,0.06)]" style={{ width: "60%" }} />
+                <div className="h-2.5 rounded-full bg-[rgba(255,255,255,0.04)]" style={{ width: "40%" }} />
+              </div>
+            ))}
+          </div>
+        </main>
+      </div>
+    );
+  }
 
   if (activeProject) {
     const project = projects.find((p) => p.id === activeProject)!;
@@ -432,9 +526,6 @@ export default function DashboardPage() {
               <Button variant="black-pill" size="md" onClick={() => setNewProjectOpen(true)}>
                 + Create first project
               </Button>
-              <Button variant="glass-dark" size="md" onClick={() => setImportOpen(true)}>
-                Import from Figma
-              </Button>
             </div>
 
             <div className="flex items-center gap-8 pt-2">
@@ -461,10 +552,25 @@ export default function DashboardPage() {
         {filteredProjects.length > 0 ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-px bg-[rgba(255,255,255,0.06)]">
             {filteredProjects.map((project) => (
-              <button
+              <div
                 key={project.id}
+                className="group relative bg-[#141414] hover:bg-[rgba(255,255,255,0.03)] transition-colors"
+              >
+              {/* Delete button */}
+              <button
+                onClick={(e) => handleDeleteProject(project.id, e)}
+                disabled={deletingId === project.id}
+                className="absolute top-3 right-3 z-10 w-6 h-6 rounded-full bg-[rgba(239,68,68,0.0)] hover:bg-[rgba(239,68,68,0.12)] text-transparent group-hover:text-[#666] hover:!text-[#f87171] flex items-center justify-center transition-all focus-visible:outline focus-visible:outline-1 focus-visible:outline-[#f87171]"
+                aria-label={`Delete ${project.name}`}
+                title="Delete project"
+              >
+                <svg width="11" height="11" viewBox="0 0 12 12" fill="none" aria-hidden="true">
+                  <path d="M2 2l8 8M10 2l-8 8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                </svg>
+              </button>
+              <button
                 onClick={() => setActiveProject(project.id)}
-                className="group bg-[#141414] p-6 flex flex-col gap-4 text-left hover:bg-[rgba(255,255,255,0.03)] transition-colors focus-visible:outline focus-visible:outline-1 focus-visible:outline-[#18e299] focus-visible:outline-offset-2"
+                className="w-full p-6 flex flex-col gap-4 text-left focus-visible:outline focus-visible:outline-1 focus-visible:outline-[#18e299] focus-visible:outline-offset-2"
               >
                 {/* Canvas preview / cover */}
                 <div className="w-full h-36 rounded-[8px] border border-[rgba(255,255,255,0.06)] overflow-hidden relative bg-[#1a1a1a]">
@@ -525,6 +631,7 @@ export default function DashboardPage() {
                   Updated {project.updatedAt}
                 </p>
               </button>
+              </div>
             ))}
 
             {/* New project card */}

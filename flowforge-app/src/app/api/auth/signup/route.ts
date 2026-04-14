@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import bcrypt from "bcryptjs";
+import { generateVerificationCode, sendVerificationEmail } from "@/lib/email";
 
 export async function POST(req: Request) {
   try {
@@ -23,6 +24,19 @@ export async function POST(req: Request) {
       data: { name: name.trim(), email: email.toLowerCase().trim(), passwordHash },
       select: { id: true, email: true, name: true },
     });
+
+    // Send email verification code (non-blocking — don't fail signup if email fails)
+    try {
+      const code = generateVerificationCode();
+      const expires = new Date(Date.now() + 10 * 60 * 1000);
+      await db.verificationToken.deleteMany({ where: { identifier: user.email! } });
+      await db.verificationToken.create({
+        data: { identifier: user.email!, token: code, expires },
+      });
+      await sendVerificationEmail({ to: user.email!, name: user.name ?? undefined, code });
+    } catch (emailErr) {
+      console.error("[signup] failed to send verification email:", emailErr);
+    }
 
     return NextResponse.json({ id: user.id, email: user.email, name: user.name });
   } catch (err) {

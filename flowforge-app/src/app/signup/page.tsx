@@ -70,7 +70,7 @@ export default function SignupPage() {
         setError("Account created — please log in.");
         router.push("/login");
       } else {
-        router.push("/onboarding");
+        router.push(`/verify-email?email=${encodeURIComponent(email.toLowerCase().trim())}`);
       }
     } catch {
       setError("Something went wrong. Please try again.");

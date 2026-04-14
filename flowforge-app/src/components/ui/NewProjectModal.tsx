@@ -619,7 +619,9 @@ export default function NewProjectModal({ onClose, onCreate }: NewProjectModalPr
   const [coverImage, setCoverImage] = useState<string | null>(null);
   const [invitees, setInvitees] = useState<string[]>([]);
   const [figmaUrl, setFigmaUrl] = useState("");
-  const [figmaToken, setFigmaToken] = useState("");
+  const [figmaToken, setFigmaToken] = useState(() =>
+    typeof window !== "undefined" ? (localStorage.getItem("ff_figma_token") ?? "") : ""
+  );
 
   // Close on Escape
   useEffect(() => {
