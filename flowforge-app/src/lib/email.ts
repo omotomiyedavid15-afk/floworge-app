@@ -1,29 +1,57 @@
-import nodemailer from "nodemailer";
+// ── Brevo transactional email sender ─────────────────────────────────────────
 
-// ── Transport ─────────────────────────────────────────────────────────────────
+async function brevoSend({
+  to,
+  subject,
+  html,
+  text,
+}: {
+  to: string;
+  subject: string;
+  html: string;
+  text: string;
+}) {
+  const apiKey = process.env.BREVO_API_KEY;
+  const fromEmail = process.env.SMTP_FROM_EMAIL;
+  const fromName = process.env.SMTP_FROM_NAME ?? "FlowForge";
 
-function createTransport() {
-  const host = process.env.SMTP_HOST;
-  const user = process.env.SMTP_USER;
-  const pass = process.env.SMTP_PASS;
-
-  // If no SMTP credentials, fall back to Ethereal (console-prints preview URL)
-  if (!host || !user || !pass) {
-    return null;
+  if (!fromEmail) {
+    throw new Error("SMTP_FROM_EMAIL environment variable is not set.");
   }
 
-  return nodemailer.createTransport({
-    host,
-    port: parseInt(process.env.SMTP_PORT ?? "587"),
-    secure: process.env.SMTP_SECURE === "true",
-    auth: { user, pass },
+  if (!apiKey) {
+    console.log(`\n[email] No BREVO_API_KEY set — would have sent "${subject}" to ${to}\n`);
+    return;
+  }
+
+  const res = await fetch("https://api.brevo.com/v3/smtp/email", {
+    method: "POST",
+    headers: {
+      "api-key": apiKey,
+      "Content-Type": "application/json",
+      "Accept": "application/json",
+    },
+    body: JSON.stringify({
+      sender: { name: fromName, email: fromEmail },
+      to: [{ email: to }],
+      subject,
+      htmlContent: html,
+      textContent: text,
+    }),
   });
+
+  if (!res.ok) {
+    const err = await res.text();
+    throw new Error(`Brevo API error ${res.status}: ${err}`);
+  }
 }
 
 // ── Code generator ────────────────────────────────────────────────────────────
 
 export function generateVerificationCode(): string {
-  return String(Math.floor(100000 + Math.random() * 900000));
+  // Use crypto for cryptographically secure 6-digit codes
+  const { randomInt } = require("crypto") as typeof import("crypto");
+  return String(randomInt(100000, 1000000));
 }
 
 // ── Email template ────────────────────────────────────────────────────────────
@@ -413,27 +441,108 @@ export async function sendVerificationEmail({
   name?: string;
   code: string;
 }) {
-  const from = process.env.SMTP_FROM ?? `FlowForge <noreply@flowforge.app>`;
   const subject = `${code} is your FlowForge verification code`;
   const html = verificationEmailHtml({ code, name });
   const text = verificationEmailText({ code, name });
 
-  const transport = createTransport();
+  await brevoSend({ to, subject, html, text });
+}
 
-  if (!transport) {
-    // Dev fallback: create a throwaway Ethereal account and log the preview URL
-    const testAccount = await nodemailer.createTestAccount();
-    const ethereal = nodemailer.createTransport({
-      host: "smtp.ethereal.email",
-      port: 587,
-      auth: { user: testAccount.user, pass: testAccount.pass },
-    });
-    const info = await ethereal.sendMail({ from, to, subject, html, text });
-    console.log(
-      `\n[email] No SMTP configured — preview at: ${nodemailer.getTestMessageUrl(info)}\n`
-    );
-    return;
-  }
+// ── Password reset email ──────────────────────────────────────────────────────
 
-  await transport.sendMail({ from, to, subject, html, text });
+export async function sendPasswordResetEmail({
+  to,
+  name,
+  code,
+}: {
+  to: string;
+  name?: string;
+  code: string;
+}) {
+  const subject = `${code} is your FlowForge password reset code`;
+  const greeting = name ? `Hi ${name.split(" ")[0]},` : "Hi there,";
+  const segments = code.split("");
+
+  const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Reset your FlowForge password</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background-color: #0d0d0d; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; -webkit-font-smoothing: antialiased; }
+    .wrapper { width: 100%; background-color: #0d0d0d; padding: 40px 16px; }
+    .container { max-width: 520px; margin: 0 auto; }
+    .header { text-align: center; padding-bottom: 32px; }
+    .logo-text { color: #ededed; font-size: 17px; font-weight: 600; letter-spacing: -0.34px; }
+    .card { background-color: #161616; border: 1px solid rgba(255,255,255,0.08); border-radius: 20px; padding: 40px; overflow: hidden; }
+    .card-accent { height: 2px; margin: -40px -40px 36px; background: linear-gradient(90deg, #18e299 0%, #0fa76e 100%); border-radius: 20px 20px 0 0; }
+    .card-title { color: #ededed; font-size: 26px; font-weight: 400; letter-spacing: -0.52px; margin-bottom: 8px; }
+    .card-subtitle { color: #888888; font-size: 14px; letter-spacing: -0.14px; line-height: 1.6; margin-bottom: 32px; }
+    .code-wrapper { background-color: #0d0d0d; border: 1px solid rgba(24,226,153,0.2); border-radius: 14px; padding: 28px 24px 24px; text-align: center; margin-bottom: 28px; }
+    .code-label { color: #18e299; font-size: 10px; font-weight: 500; letter-spacing: 1.2px; text-transform: uppercase; font-family: 'Courier New', monospace; margin-bottom: 14px; }
+    .code-digits { display: flex; align-items: center; justify-content: center; gap: 6px; }
+    .code-digit { display: inline-flex; width: 52px; height: 60px; align-items: center; justify-content: center; background-color: #1a1a1a; border: 1px solid rgba(255,255,255,0.1); border-radius: 10px; color: #ededed; font-family: 'Courier New', monospace; font-size: 28px; font-weight: 700; }
+    .code-separator { color: rgba(255,255,255,0.2); font-size: 20px; margin: 0 4px; }
+    .code-expires { margin-top: 16px; color: #555555; font-size: 12px; }
+    .body-text { color: #666666; font-size: 13px; line-height: 1.65; margin-bottom: 20px; }
+    .divider { height: 1px; background-color: rgba(255,255,255,0.06); margin: 24px 0; }
+    .security-notice { background-color: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); border-radius: 10px; padding: 14px 16px; }
+    .security-text { color: #555555; font-size: 12px; line-height: 1.6; }
+    .footer { text-align: center; padding-top: 28px; }
+    .footer-text { color: #333333; font-size: 12px; line-height: 1.6; }
+  </style>
+</head>
+<body>
+  <div class="wrapper"><div class="container">
+    <div class="header">
+      <span style="display:inline-flex;align-items:center;gap:8px;">
+        <svg width="20" height="20" viewBox="0 0 22 22" fill="none"><circle cx="8" cy="11" r="7" fill="#ededed"/><circle cx="14" cy="11" r="7" fill="#0d0d0d" stroke="#ededed" stroke-width="1.5"/></svg>
+        <span class="logo-text">FlowForge</span>
+      </span>
+    </div>
+    <div class="card">
+      <div class="card-accent"></div>
+      <h1 class="card-title">Reset your password</h1>
+      <p class="card-subtitle">${greeting} Use the code below to reset your FlowForge password. This code expires in 10 minutes.</p>
+      <div class="code-wrapper">
+        <p class="code-label">Password reset code</p>
+        <div class="code-digits">
+          <span class="code-digit">${segments[0]}</span>
+          <span class="code-digit">${segments[1]}</span>
+          <span class="code-digit">${segments[2]}</span>
+          <span class="code-separator">·</span>
+          <span class="code-digit">${segments[3]}</span>
+          <span class="code-digit">${segments[4]}</span>
+          <span class="code-digit">${segments[5]}</span>
+        </div>
+        <p class="code-expires">⏱ Expires in 10 minutes</p>
+      </div>
+      <p class="body-text">Enter this code on the password reset page along with your new password.</p>
+      <div class="divider"></div>
+      <div class="security-notice">
+        <p class="security-text">If you didn't request a password reset, you can safely ignore this email. Your password will not be changed.</p>
+      </div>
+    </div>
+    <div class="footer"><p class="footer-text">FlowForge &mdash; Design-to-engineering handoff</p></div>
+  </div></div>
+</body>
+</html>`;
+
+  const text = [
+    "FlowForge — Password Reset",
+    "",
+    greeting,
+    "",
+    `Your password reset code is: ${code}`,
+    "",
+    "This code expires in 10 minutes.",
+    "",
+    "If you didn't request a password reset, ignore this email.",
+    "",
+    "— The FlowForge team",
+  ].join("\n");
+
+  await brevoSend({ to, subject, html, text });
 }

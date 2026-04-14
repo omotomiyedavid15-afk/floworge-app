@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { db } from "@/lib/db";
 import bcrypt from "bcryptjs";
+import { rateLimit, tooManyRequests } from "@/lib/rate-limit";
 
 export async function PATCH(req: Request) {
   const session = await auth();
@@ -9,14 +10,18 @@ export async function PATCH(req: Request) {
     return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
   }
 
+  // 5 password change attempts per user per 15 minutes
+  const { success, retryAfter } = rateLimit(`change-password:${session.user.id}`, 5, 15 * 60 * 1000);
+  if (!success) return tooManyRequests(retryAfter);
+
   try {
     const { currentPassword, newPassword } = await req.json();
 
     if (!currentPassword || !newPassword) {
       return NextResponse.json({ error: "Both current and new passwords are required." }, { status: 400 });
     }
-    if ((newPassword as string).length < 8) {
-      return NextResponse.json({ error: "New password must be at least 8 characters." }, { status: 400 });
+    if (typeof newPassword !== "string" || newPassword.length < 8 || newPassword.length > 128) {
+      return NextResponse.json({ error: "New password must be 8–128 characters." }, { status: 400 });
     }
 
     const user = await db.user.findUnique({

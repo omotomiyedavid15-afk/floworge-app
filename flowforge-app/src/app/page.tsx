@@ -1,4 +1,5 @@
 import Navbar from "@/components/layout/Navbar";
+import { DottedSurface } from "@/components/ui/dotted-surface";
 import Button from "@/components/ui/Button";
 
 // ── Feature data ──────────────────────────────────────────────────────────────
@@ -35,7 +36,9 @@ export default function Home() {
       <Navbar />
 
       {/* ── Hero ── */}
-      <section className="gradient-hero flex flex-col items-center justify-center text-center px-6 py-28 md:py-40">
+      <section className="gradient-hero relative overflow-hidden flex flex-col items-center justify-center text-center px-6 py-28 md:py-40">
+        <DottedSurface className="absolute inset-0 w-full h-full pointer-events-none" />
+        <div className="relative z-10 flex flex-col items-center">
         {/* Mono label */}
         <p
           className="text-mono-label mb-8"
@@ -73,6 +76,7 @@ export default function Home() {
         >
           Trusted by design-forward engineering teams
         </p>
+        </div>
       </section>
 
       {/* ── Product preview strip ── */}

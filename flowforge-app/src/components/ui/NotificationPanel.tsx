@@ -11,12 +11,7 @@ interface Notification {
   read: boolean;
 }
 
-const NOTIFICATIONS: Notification[] = [
-  { id: "n1", type: "success", title: "AI processing complete", project: "Mobile Banking App", time: "2 min ago", read: false },
-  { id: "n2", type: "comment", title: "New comment", project: "Design System v3", time: "1 hour ago", read: false },
-  { id: "n3", type: "share", title: "Share accessed", project: "Checkout Redesign", time: "3 hours ago", read: false },
-  { id: "n4", type: "error", title: "Processing failed", project: "Profile Screen", time: "yesterday", read: true },
-];
+const NOTIFICATIONS: Notification[] = [];
 
 function NotifIcon({ type }: { type: Notification["type"] }) {
   if (type === "success") return (
@@ -111,41 +106,54 @@ export default function NotificationPanel({ onClose }: NotificationPanelProps) {
       </div>
 
       {/* Notification list */}
-      <ul role="list" className="flex flex-col">
-        {NOTIFICATIONS.map((notif, i) => (
-          <li key={notif.id}>
-            <button
-              className={`w-full flex items-start gap-3 px-4 py-3.5 text-left transition-colors hover:bg-[rgba(255,255,255,0.04)] focus-visible:outline focus-visible:outline-1 focus-visible:outline-[#18e299] focus-visible:outline-offset-2 ${
-                i < NOTIFICATIONS.length - 1 ? "border-b border-[rgba(255,255,255,0.04)]" : ""
-              }`}
-            >
-              <NotifIcon type={notif.type} />
-              <div className="flex-1 min-w-0">
-                <div className="flex items-start justify-between gap-2">
-                  <p
-                    className="text-[#ededed]"
-                    style={{ fontSize: "13px", fontWeight: notif.read ? 400 : 500, letterSpacing: "-0.1px", lineHeight: 1.4 }}
-                  >
-                    {notif.title}
+      {NOTIFICATIONS.length === 0 ? (
+        <div className="flex flex-col items-center justify-center px-4 py-10 gap-2">
+          <div className="w-9 h-9 rounded-full bg-[rgba(255,255,255,0.04)] flex items-center justify-center mb-1">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 01-3.46 0" stroke="#555555" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </div>
+          <p className="text-[#555555]" style={{ fontSize: "13px", fontWeight: 400, letterSpacing: "-0.1px" }}>
+            No notifications yet
+          </p>
+        </div>
+      ) : (
+        <ul role="list" className="flex flex-col">
+          {NOTIFICATIONS.map((notif, i) => (
+            <li key={notif.id}>
+              <button
+                className={`w-full flex items-start gap-3 px-4 py-3.5 text-left transition-colors hover:bg-[rgba(255,255,255,0.04)] focus-visible:outline focus-visible:outline-1 focus-visible:outline-[#18e299] focus-visible:outline-offset-2 ${
+                  i < NOTIFICATIONS.length - 1 ? "border-b border-[rgba(255,255,255,0.04)]" : ""
+                }`}
+              >
+                <NotifIcon type={notif.type} />
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-start justify-between gap-2">
+                    <p
+                      className="text-[#ededed]"
+                      style={{ fontSize: "13px", fontWeight: notif.read ? 400 : 500, letterSpacing: "-0.1px", lineHeight: 1.4 }}
+                    >
+                      {notif.title}
+                    </p>
+                    {!notif.read && (
+                      <span className="w-1.5 h-1.5 rounded-full bg-[#18e299] shrink-0 mt-1.5" aria-label="Unread" />
+                    )}
+                  </div>
+                  <p className="text-[#888888] mt-0.5 truncate" style={{ fontSize: "12px", fontWeight: 400 }}>
+                    {notif.project}
                   </p>
-                  {!notif.read && (
-                    <span className="w-1.5 h-1.5 rounded-full bg-[#18e299] shrink-0 mt-1.5" aria-label="Unread" />
-                  )}
+                  <p
+                    className="text-[#666666] mt-0.5"
+                    style={{ fontSize: "11px", fontWeight: 400, letterSpacing: "0.3px", fontFamily: "var(--font-mono, monospace)", textTransform: "uppercase" }}
+                  >
+                    {notif.time}
+                  </p>
                 </div>
-                <p className="text-[#888888] mt-0.5 truncate" style={{ fontSize: "12px", fontWeight: 400 }}>
-                  {notif.project}
-                </p>
-                <p
-                  className="text-[#666666] mt-0.5"
-                  style={{ fontSize: "11px", fontWeight: 400, letterSpacing: "0.3px", fontFamily: "var(--font-mono, monospace)", textTransform: "uppercase" }}
-                >
-                  {notif.time}
-                </p>
-              </div>
-            </button>
-          </li>
-        ))}
-      </ul>
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
 
       {/* Footer */}
       <div className="px-4 py-3 border-t border-[rgba(255,255,255,0.06)] text-center">

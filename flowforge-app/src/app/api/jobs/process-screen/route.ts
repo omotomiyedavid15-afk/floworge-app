@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { PrismaClient } from "@prisma/client";
+import { auth } from "@/auth";
+import { db } from "@/lib/db";
+import { rateLimit, tooManyRequests } from "@/lib/rate-limit";
 
-const prisma = new PrismaClient();
 const GROQ_API_KEY = process.env.GROQ_API_KEY;
 
 if (!GROQ_API_KEY) {
@@ -38,82 +39,62 @@ async function groqChat(prompt: string, maxTokens = 1024): Promise<string> {
   return data.choices[0]?.message?.content ?? "";
 }
 
-// Simple in-memory rate limiter
-const rateLimitMap = new Map<string, number>();
-const RATE_LIMIT_WINDOW = 60 * 1000;
-const MAX_REQUESTS = 10;
-
 export async function POST(req: NextRequest) {
+  if (!GROQ_API_KEY) {
+    return NextResponse.json(
+      { error: "AI Processing Service is not configured." },
+      { status: 503 }
+    );
+  }
+
+  // Proper session-based authentication
+  const session = await auth();
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
+  }
+
+  // 10 requests per user per minute
+  const { success, retryAfter } = rateLimit(`process-screen:${session.user.id}`, 10, 60 * 1000);
+  if (!success) return tooManyRequests(retryAfter);
+
   try {
-    // 1. Check if API key is configured
-    if (!GROQ_API_KEY) {
-      return NextResponse.json(
-        { error: "AI Processing Service is not configured (Missing GROQ_API_KEY)" },
-        { status: 503 }
-      );
-    }
-
-    // 2. Authentication guard
-    const sessionToken = req.headers.get("x-flowforge-session");
-    if (!sessionToken) {
-      return NextResponse.json(
-        { error: "Unauthorized: Missing active session" },
-        { status: 401 }
-      );
-    }
-
-    // 3. Rate limiting
-    const now = Date.now();
-    const lastRequest = rateLimitMap.get(sessionToken) || 0;
-    if (now - lastRequest < RATE_LIMIT_WINDOW / MAX_REQUESTS) {
-      return NextResponse.json(
-        { error: "Too many requests. Please slow down." },
-        { status: 429 }
-      );
-    }
-    rateLimitMap.set(sessionToken, now);
-
     const { screenId } = await req.json();
-    if (!screenId) {
-      return NextResponse.json({ error: "screenId is required" }, { status: 400 });
+    if (!screenId || typeof screenId !== "string") {
+      return NextResponse.json({ error: "screenId is required." }, { status: 400 });
     }
 
-    // 4. Fetch screen from DB
-    const screen = await prisma.screen.findUnique({ where: { id: screenId } });
-    if (!screen || !screen.backdropUrl) {
-      return NextResponse.json({ error: "Screen or backdropUrl not found" }, { status: 404 });
-    }
-
-    await prisma.screen.update({
-      where: { id: screenId },
-      data: { processingStatus: "processing" },
+    // Verify the screen belongs to the authenticated user
+    const screen = await db.screen.findFirst({
+      where: {
+        id: screenId,
+        project: { userId: session.user.id },
+      },
     });
 
-    // ── STAGE 2: Layout Analysis ──
+    if (!screen || !screen.backdropUrl) {
+      return NextResponse.json({ error: "Screen not found." }, { status: 404 });
+    }
+
+    await db.screen.update({ where: { id: screenId }, data: { processingStatus: "processing" } });
+
     const layoutResult = await groqChat(
       "Analyze a UI screen and identify its major regions: header, navigation, main content area, sidebar, footer. " +
       "Output only valid JSON in this shape: {\"regions\": [{\"name\": string, \"bounds\": {\"x\": number, \"y\": number, \"w\": number, \"h\": number}}]}"
     );
-    console.log("Layout Analysis:", layoutResult);
 
-    // ── STAGE 3: Element Detection ──
     const elementResult = await groqChat(
       "Identify all interactive and structural UI elements in a screen. For each element provide: " +
       "name (e.g. 'Login Button'), type (Button, Input, Dropdown, Navbar, Card, etc.), bounds (x, y, width, height in pixels). " +
       "Output only valid JSON: {\"elements\": [{\"name\": string, \"type\": string, \"bounds\": {\"x\": number, \"y\": number, \"w\": number, \"h\": number}}]}",
       2048
     );
-    console.log("Element Detection:", elementResult);
 
-    // ── STAGE 4: Update screen as done ──
-    await prisma.screen.update({
-      where: { id: screenId },
-      data: { processingStatus: "done" },
-    });
+    await db.screen.update({ where: { id: screenId }, data: { processingStatus: "done" } });
 
     return NextResponse.json({ success: true, message: "Screen processed successfully" });
-  } catch (error: any) {
-    console.error("Processing Error:", error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : "Unknown error";
+    console.error("[process-screen]", msg);
+    return NextResponse.json({ error: "Processing failed." }, { status: 500 });
   }
 }

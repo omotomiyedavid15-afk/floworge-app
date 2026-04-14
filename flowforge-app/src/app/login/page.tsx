@@ -105,6 +105,13 @@ export default function LoginPage() {
                 <label htmlFor="password" className="text-[#ededed]" style={{ fontSize: "13px", fontWeight: 450, letterSpacing: "-0.1px" }}>
                   Password
                 </label>
+                <Link
+                  href="/forgot-password"
+                  className="text-[#555555] hover:text-[#888888] transition-colors focus-visible:outline focus-visible:outline-1 focus-visible:outline-[#18e299] rounded-sm"
+                  style={{ fontSize: "12px", fontWeight: 330, letterSpacing: "-0.1px" }}
+                >
+                  Forgot password?
+                </Link>
               </div>
               <div className="relative">
                 <input

@@ -10,7 +10,8 @@
       "WebFetch(domain:www.pinterest.com)",
       "WebSearch",
       "WebFetch(domain:dribbble.com)",
-      "Bash(node:*)"
+      "Bash(node:*)",
+      "Bash(cursor:*)"
     ]
   }
 }

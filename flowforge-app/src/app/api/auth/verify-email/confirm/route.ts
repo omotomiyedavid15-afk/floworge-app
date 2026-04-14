@@ -1,7 +1,12 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { rateLimit, getIP, tooManyRequests } from "@/lib/rate-limit";
 
 export async function POST(req: Request) {
+  // 10 attempts per IP per 15 minutes
+  const { success, retryAfter } = rateLimit(`verify-confirm:${getIP(req)}`, 10, 15 * 60 * 1000);
+  if (!success) return tooManyRequests(retryAfter);
+
   try {
     const { email, code } = await req.json();
 
@@ -12,7 +17,7 @@ export async function POST(req: Request) {
     const normalizedEmail = (email as string).toLowerCase().trim();
 
     const record = await db.verificationToken.findFirst({
-      where: { identifier: normalizedEmail, token: code as string },
+      where: { identifier: normalizedEmail, token: String(code) },
     });
 
     if (!record) {
@@ -24,12 +29,8 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "This code has expired. Please request a new one." }, { status: 400 });
     }
 
-    // Mark email as verified and clean up the token
     await db.$transaction([
-      db.user.update({
-        where: { email: normalizedEmail },
-        data: { emailVerified: new Date() },
-      }),
+      db.user.update({ where: { email: normalizedEmail }, data: { emailVerified: new Date() } }),
       db.verificationToken.deleteMany({ where: { identifier: normalizedEmail } }),
     ]);
 

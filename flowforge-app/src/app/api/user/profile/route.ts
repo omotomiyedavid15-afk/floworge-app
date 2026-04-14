@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { db } from "@/lib/db";
+import { rateLimit, tooManyRequests } from "@/lib/rate-limit";
 
 export async function PATCH(req: Request) {
   const session = await auth();
@@ -8,14 +9,18 @@ export async function PATCH(req: Request) {
     return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
   }
 
+  // 10 profile updates per user per hour
+  const { success, retryAfter } = rateLimit(`update-profile:${session.user.id}`, 10, 60 * 60 * 1000);
+  if (!success) return tooManyRequests(retryAfter);
+
   try {
     const { name, email } = await req.json();
 
-    if (!name?.trim()) {
-      return NextResponse.json({ error: "Name cannot be empty." }, { status: 400 });
+    if (!name?.trim() || typeof name !== "string" || name.trim().length > 100) {
+      return NextResponse.json({ error: "Name must be 1–100 characters." }, { status: 400 });
     }
-    if (!email?.trim()) {
-      return NextResponse.json({ error: "Email cannot be empty." }, { status: 400 });
+    if (!email?.trim() || typeof email !== "string" || email.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      return NextResponse.json({ error: "Invalid email address." }, { status: 400 });
     }
 
     const normalizedEmail = (email as string).toLowerCase().trim();
