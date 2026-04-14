@@ -32,5 +32,9 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       },
     }),
   ],
-  secret: process.env.AUTH_SECRET ?? process.env.SESSION_SECRET ?? (() => { throw new Error("AUTH_SECRET environment variable is not set."); })(),
+  get secret() {
+    const s = process.env.AUTH_SECRET ?? process.env.SESSION_SECRET;
+    if (!s) throw new Error("AUTH_SECRET environment variable is not set.");
+    return s;
+  },
 });
