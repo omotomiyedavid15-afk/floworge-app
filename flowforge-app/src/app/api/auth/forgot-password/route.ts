@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { after } from "next/server";
 import { db } from "@/lib/db";
 import { generateVerificationCode, sendPasswordResetEmail } from "@/lib/email";
 import { rateLimit, getIP, tooManyRequests } from "@/lib/rate-limit";
@@ -33,11 +34,13 @@ export async function POST(req: Request) {
     await db.verificationToken.deleteMany({ where: { identifier } });
     await db.verificationToken.create({ data: { identifier, token: code, expires } });
 
-    try {
-      await sendPasswordResetEmail({ to: normalizedEmail, name: user.name ?? undefined, code });
-    } catch (emailErr) {
-      console.error("[forgot-password] email send failed:", emailErr);
-    }
+    after(async () => {
+      try {
+        await sendPasswordResetEmail({ to: normalizedEmail, name: user.name ?? undefined, code });
+      } catch (emailErr) {
+        console.error("[forgot-password] email send failed:", emailErr);
+      }
+    });
 
     return NextResponse.json({ ok: true });
   } catch (err) {

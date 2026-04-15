@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextResponse, after } from "next/server";
 import { db } from "@/lib/db";
 import { generateVerificationCode, sendVerificationEmail } from "@/lib/email";
 import { rateLimit, getIP, tooManyRequests } from "@/lib/rate-limit";
@@ -37,7 +37,9 @@ export async function POST(req: Request) {
     await db.verificationToken.deleteMany({ where: { identifier: normalizedEmail } });
     await db.verificationToken.create({ data: { identifier: normalizedEmail, token: code, expires } });
 
-    await sendVerificationEmail({ to: normalizedEmail, name: user.name ?? undefined, code });
+    after(async () => {
+      await sendVerificationEmail({ to: normalizedEmail, name: user.name ?? undefined, code });
+    });
 
     return NextResponse.json({ ok: true });
   } catch (err) {
